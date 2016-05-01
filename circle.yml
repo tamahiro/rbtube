@@ -10,5 +10,4 @@ test:
   pre:
     - sh/saddler.sh
   override:
-    - bundle exec brakeman --exit-on-warn -o $CIRCLE_ARTIFACTS/brakeman.html
     - bundle exec rspec
