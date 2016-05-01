@@ -1,0 +1,14 @@
+general:
+  branches:
+    ignore:
+      - production
+machine:
+  timezone: Asia/Tokyo
+  ruby:
+    version: 2.3.0
+test:
+  pre:
+    - sh/saddler.sh
+  override:
+    - bundle exec brakeman --exit-on-warn -o $CIRCLE_ARTIFACTS/brakeman.html
+    - bundle exec rspec
