@@ -4,3 +4,6 @@ AsciiComments:
 # Missing top level class documentation comment.
 Style/Documentation:
   Enabled: false
+
+Style/Tab:
+  Enabled: false
