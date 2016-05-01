@@ -1,0 +1,13 @@
+general:
+  branches:
+    ignore:
+      - production
+machine:
+  timezone: Asia/Tokyo
+  ruby:
+    version: 2.3.0
+test:
+  pre:
+    - sh/saddler.sh
+  override:
+    - bundle exec rspec
