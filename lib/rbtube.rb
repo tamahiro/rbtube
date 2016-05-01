@@ -1,4 +1,4 @@
-require "rbtube/version"
+require 'rbtube/version'
 
 module Rbtube
   # Your code goes here...
