@@ -7,6 +7,28 @@ module Rbtube
     YOUTUBE_BASE_URL = 'https://www.youtube.com/watch'.freeze
     JSON_START_PATTERN = 'ytplayer.config = '.freeze
     JSON_START_LENGTH = 18
+    QUALITY_PROFILES = {
+      # flash
+      5 => %w(flv 240p Sorenson\ H.263 N/A 0.25 MP3 64),
+      # 3gp
+      17 => %w(3gp 144p MPEG-4\ Visual Simple 0.05 AAC 24),
+      36 => %w(3gp 240p MPEG-4\ Visual Simple 0.17 AAC 38),
+
+      # webm
+      43 => %w(webm 360p VP8 N/A 0.5 Vorbis 128),
+      100 => %w(webm 360p VP8 3D N/A Vorbis 128),
+
+      # mpeg4
+      18 => %w(mp4 360p H.264 Baseline 0.5 AAC 96),
+      22 => %w(mp4 720p H.264 High 2-2.9 AAC 192),
+      82 => %w(mp4 360p H.264 3D 0.5 AAC 96),
+      83 => %w(mp4 240p H.264 3D 0.5 AAC 96),
+      84 => %w(mp4 720p H.264 3D 2-2.9 AAC 152),
+      85 => %w(mp4 1080p H.264 3D 2-2.9 AAC 152)
+    }.freeze
+
+    QUALITY_PROFILE_KEYS = %w(extension resolution video_codec profile
+                              video_bitrate audio_codec audio_bitrate).freeze
 
     def initialize(url)
       @video_uri, @video_key = _parse_url(url)
@@ -14,22 +36,34 @@ module Rbtube
     end
 
     def fetch_data_from_url
-      video_urls.each.with_index(1) do |url, index|
-        itag, quality_profile = _quality_profile_from_url(url)
-        next if quality_profile
+      video_urls.each.with_index do |url, index|
+        begin
+          itag, quality_profile = _quality_profile_from_url(url)
+          next unless quality_profile
+        rescue => e
+          puts [e.class, e.messgae, e.backtrace.join('\n')]
+          next
+        end
+
+        unless url =~ /signature=/
+          signature = _get_cipher(stream_map['s'][index], js_url)
+          url += "&signature=#{signature}"
+        end
+
+        #self._add_video(url, self.filename, **quality_profile)
       end
     end
 
     def video_data
-      unless @video_data
+      if @video_data
+        @video_data
+      else
         response = http_client.get_response(video_uri)
         json_data = _json_data(response.body)
         encoded_fmt_stream_map = json_data['args']['url_encoded_fmt_stream_map']
         json_data['args']['stream_map'] =
           _parse_stream_map(encoded_fmt_stream_map)
         @video_data = json_data
-      else
-        @video_data
       end
     end
 
@@ -107,7 +141,32 @@ module Rbtube
     end
 
     def _quality_profile_from_url(url)
-      binding.pry
+      itags = url.scan(/itag=(\d+)/)
+
+      if itags && itags.flatten!.size == 1
+        itag = itags.first.to_i
+        quality_profile = QUALITY_PROFILES[itag]
+        if quality_profile
+          [itag, QUALITY_PROFILE_KEYS.zip(quality_profile).to_h]
+        else
+          [itag, nil]
+        end
+      else
+        raise('Condn\'t get encoding profile. ')
+      end
+    end
+
+    def _get_cipher(signature, url)
+      js_cache = _js_cache(url)
+      func_name = js_cache.scan(/\.sig\|\|([a-zA-Z0-9$]+)\(/).flatten.first
+      jsi = JSInterpreter.new(js_cache)
+      initial_function = jsi.extract_function(func_name)
+      initial_function.call([signature])
+    end
+
+    def _js_cache(url)
+      @_js_cache ||=
+        http_client.get_response(URI.parse(url)).body
     end
   end
 end
