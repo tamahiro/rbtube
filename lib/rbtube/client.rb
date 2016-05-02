@@ -92,7 +92,7 @@ module Rbtube
         [uri, math_video_key && math_video_key[1]]
       else
         raise('Invalid url params. Please set a url like: '\
-				      'https://www.youtube.com/watch?v=AANwFq43Qaw .')
+              'https://www.youtube.com/watch?v=AANwFq43Qaw .')
       end
     end
 
